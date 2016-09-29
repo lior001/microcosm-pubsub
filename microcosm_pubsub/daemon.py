@@ -9,13 +9,7 @@ from microcosm_daemon.api import SleepNow
 from microcosm_daemon.daemon import Daemon
 
 
-class ConsumerDaemon(Daemon):
-
-    def make_arg_parser(self):
-        parser = super(ConsumerDaemon, self).make_arg_parser()
-        parser.add_argument("--sqs-queue-url")
-        return parser
-
+class ProducerDaemon(Daemon):
     @abstractproperty
     def schema_mappings(self):
         """
@@ -23,6 +17,31 @@ class ConsumerDaemon(Daemon):
 
         """
         pass
+
+    @property
+    def defaults(self):
+        dct = dict(
+            pubsub_message_codecs=dict(
+                mappings=self.schema_mappings,
+            ),
+        )
+
+        return dct
+
+    @property
+    def components(self):
+        return super(ProducerDaemon, self).components + [
+            "opaque",
+            "pubsub_message_codecs",
+        ]
+
+
+class ConsumerDaemon(ProducerDaemon):
+
+    def make_arg_parser(self):
+        parser = super(ConsumerDaemon, self).make_arg_parser()
+        parser.add_argument("--sqs-queue-url")
+        return parser
 
     def handler_mappings(self):
         """
@@ -37,14 +56,11 @@ class ConsumerDaemon(Daemon):
 
     @property
     def defaults(self):
-        dct = dict(
-            pubsub_message_codecs=dict(
-                mappings=self.schema_mappings,
-            ),
-            sqs_consumer=dict(
-                visibility_timeout_seconds=None,
-            ),
+        dct = super(ConsumerDaemon, self).defaults
+        dct.sqs_consumer=dict(
+            visibility_timeout_seconds=None,
         )
+
         if self.handler_mappings:
             dct.update(
                 sqs_message_dispatcher=dict(
@@ -59,8 +75,6 @@ class ConsumerDaemon(Daemon):
     @property
     def components(self):
         return super(ConsumerDaemon, self).components + [
-            "opaque",
-            "pubsub_message_codecs",
             "sqs_consumer",
             "sqs_message_dispatcher",
         ]
