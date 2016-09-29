@@ -57,7 +57,7 @@ class ConsumerDaemon(ProducerDaemon):
     @property
     def defaults(self):
         dct = super(ConsumerDaemon, self).defaults
-        dct.sqs_consumer=dict(
+        dct.sqs_consumer = dict(
             visibility_timeout_seconds=None,
         )
 
